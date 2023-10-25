@@ -11,7 +11,7 @@ message ShowtimeDate {
 
 message ShowtimeData {
     string date = 1;
-    string movies = 2;
+    repeated string movies = 2;
 }
 
 message Empty {
