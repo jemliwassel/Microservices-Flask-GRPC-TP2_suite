@@ -1,8 +1,9 @@
 syntax = "proto3";
 
 service Booking{
-    rpc GetBookingByUserID(UserID) returns (BookingData) {}
-    rpc AddBookingForUser(AddBookingRequest) returns (AddBookingResponse) {}
+    rpc GetBookingByUserID(UserID) returns (stream BookingData) {}
+    rpc AddBookingForUser(AddBookingRequest) returns (BookingData) {}
+    rpc GetListBookings(EmptyBooking) returns (stream BookingData) {}
 }
 
 message UserID {
@@ -25,7 +26,6 @@ message AddBookingRequest{
     string movie_id = 3;
 }
 
-message AddBookingResponse{
-    bool success = 1;
-    string message = 2;
+message EmptyBooking{
+
 }
