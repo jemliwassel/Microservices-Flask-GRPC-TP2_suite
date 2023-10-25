@@ -1,13 +1,13 @@
-# UE-AD-A1-GRAPHQL
+# UE-AD-A1-GRPC
 
-GraphQL TP
+GRPC TP
 
 TP VERT : Finished
 
 ## Introduction
 
-This repository contains the source code and documentation for the graphQL TP.
-The TP includes modifying the Movie service with graphQL and the User service that interacts with the other services.
+This repository contains the source code and documentation for the GRPC TP.
+The TP includes modifying the services Time, Booking and User with grpc.
 
 ## Set up
 
@@ -23,3 +23,5 @@ The TP includes modifying the Movie service with graphQL and the User service th
 `cd .\movie\ ` `py .\movie.py`
 
 `cd .\showtime\ ` `py .\showtime.py`
+
+In the services Time and Booking, launch the client.py file via py .\client.py
