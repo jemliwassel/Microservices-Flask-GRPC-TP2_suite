@@ -3,17 +3,10 @@ from flask import Flask, render_template, request, jsonify, make_response
 import requests
 import json
 from werkzeug.exceptions import NotFound
-
-# CALLING gRPC requests
-# import grpc
-# from concurrent import futures
-# import booking_pb2
-# import booking_pb2_grpc
-# import movie_pb2
-# import movie_pb2_grpc
-
-# CALLING GraphQL requests
-# todo to complete
+import grpc
+import booking_pb2
+import booking_pb2_grpc
+from google.protobuf.json_format import MessageToDict
 
 app = Flask(__name__)
 
@@ -42,52 +35,56 @@ def get_user_infos(user_id):
 
 
 # Get reservations (Bookings) by user_id and date
+# We use distant procedure from the Booking service to get informations
 @app.route("/user/reservations/<user_id>", methods=["GET"])
 def get_user_reservation(user_id):
     reservation_date = request.get_json().get("date")
-    all_reservations_for_user = requests.get(
-        f"http://127.0.0.1:3201/bookings/<user_id>", params={user_id: user_id}
-    )
-    if all_reservations_for_user.status_code == 200:
-        all_reservations_for_user = all_reservations_for_user.json()
+    with grpc.insecure_channel('localhost:3001') as channel :
+        stub = booking_pb2_grpc.BookingStub(channel)
+        all_reservations_for_user = stub.GetBookingByUserID(booking_pb2.UserID(user_id=user_id))    
         reservations = []
-        for dates in all_reservations_for_user["dates"]:
-            if dates["date"] == reservation_date:
-                reservations.append(dates)
-            else:
-                continue
-        res = make_response(reservations, 200)
-        return res
-    else:
-        return make_response(jsonify({"Error": "User doesn't exist"}), 402)
-
+        for reservation in all_reservations_for_user:
+            for dates in reservation.dates:
+                if dates.date == reservation_date:
+                    reservations.append(dates)
+                else:
+                    continue     
+        channel.close()
+        for item in reservations:
+            res  = make_response(MessageToDict(item), 200)
+            return res
+        return make_response(jsonify({"Error": "There is an error in user booking request"}), 402)
+        
 
 # Get reservations(bookings) details by user_id
 # We use graphQL to access the movie Service and get informations about movies.
+# We use distant procedure from the Booking service to get informations
 @app.route("/user/reservation_details/<user_id>", methods=["GET"])
 def get_user_reservation_details(user_id):
-    all_reservations_for_user = requests.get(
-        f"http://127.0.0.1:3201/bookings/{user_id}"
-    ).json()
-    details = []
-    for reservation in all_reservations_for_user["dates"]:
-        reservation_details = {"date": reservation["date"], "movies": []}
-        for movie_id in reservation["movies"]:
-            # graphQL request
-            movie_details = requests.post(
-                f"http://127.0.0.1:3001/graphql",
-                json={
-                    "query": 'query{ movie_with_id(_id:"'
-                    + f"{movie_id}"
-                    + '"){id title director rating}}'
-                },
-            ).json()
-            reservation_details["movies"].append(movie_details)
-        details.append(reservation_details)
-    res = make_response(jsonify(reservation_details), 200)
+    with grpc.insecure_channel('localhost:3001') as channel :
+        stub = booking_pb2_grpc.BookingStub(channel)
+        all_reservations_for_user = stub.GetBookingByUserID(booking_pb2.UserID(user_id=user_id))
+        details = []
+        for reservation in all_reservations_for_user:
+            for dates in reservation.dates:
+                reservation_details = {"date": dates.date,  "movies": []}
+                for movie_id in dates.movies: 
+                    # graphQL request
+                    movie_details = requests.post(
+                        f"http://127.0.0.1:3001/graphql",
+                        json={
+                            "query": 'query{ movie_with_id(_id:"'
+                            + f"{movie_id}"
+                            + '"){id title director rating}}'
+                        },
+                    ).json()
+                    reservation_details["movies"].append(movie_details["data"]["movie_with_id"])
+                details.append(reservation_details)
+        channel.close()
+    res = make_response(jsonify(details), 200)
     return res
 
 
 if __name__ == "__main__":
     print("Server running in port %s" % (PORT))
-    app.run(host=HOST, port=PORT)
+    app.run(host=HOST, port=PORT, debug=True)
