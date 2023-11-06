@@ -85,6 +85,58 @@ def get_user_reservation_details(user_id):
     return res
 
 
+@app.route("/user/movies/<movieid>/<rate>", methods=['PUT'])
+def update_movie_rating(movieid, rate):
+    res = requests.post(
+        f"http://127.0.0.1:3001/graphql",
+        json={
+            "query": 'mutation{update_movie_rate'
+            + '(_id:"'+ f"{movieid}"
+            + '", _rate:'+ f"{rate}"
+            + ') {title rating}}'
+        },
+    )
+    return make_response(res.json(), res.status_code)
+
+@app.route("/user/movies/<movieid>", methods=['GET'])
+def movie_with_id(movieid):
+    res = requests.post(
+        f"http://127.0.0.1:3001/graphql",
+        json={
+            "query": 'query{movie_with_id'
+            + '(_id:"'+ f"{movieid}"
+            + '") {id title director rating actors{firstname lastname}}}'
+        },
+    )
+    return make_response(res.json(), res.status_code)
+
+@app.route("/user/moviesbytitle/<movietitle>", methods=['GET'])
+def movie_with_ititle(movietitle):
+    res = requests.post(
+        f"http://127.0.0.1:3001/graphql",
+        json={
+            "query": 'query{movie_with_title'
+            + '(_title:"'+ f"{movietitle}"
+            + '") {id title director rating actors{firstname lastname}}}'
+        },
+    )
+    return make_response(res.json(), res.status_code)
+
+@app.route("/user/addmovie/", methods=['POST'])
+def add_movie():
+    req = request.get_json()
+    print(req)
+    res = requests.post(
+        f"http://127.0.0.1:3001/graphql",
+        json={
+            "query": 'mutation{add_movie'
+            + '(_movie:{' + ', '.join(f'{key}: {json.dumps(value)}' for key, value in req.items()) + '}'
+            + ') {id title director rating actors{firstname lastname}}}'
+        },
+    )
+    return make_response(res.json(), res.status_code)
+
+
 if __name__ == "__main__":
     print("Server running in port %s" % (PORT))
     app.run(host=HOST, port=PORT, debug=True)
