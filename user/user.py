@@ -2,7 +2,6 @@
 from flask import Flask, render_template, request, jsonify, make_response
 import requests
 import json
-from werkzeug.exceptions import NotFound
 import grpc
 import booking_pb2
 import booking_pb2_grpc
@@ -38,23 +37,24 @@ def get_user_infos(user_id):
 # We use distant procedure from the Booking service to get informations
 @app.route("/user/reservations/<user_id>", methods=["GET"])
 def get_user_reservation(user_id):
-    reservation_date = request.get_json().get("date")
-    with grpc.insecure_channel('localhost:3001') as channel :
-        stub = booking_pb2_grpc.BookingStub(channel)
-        all_reservations_for_user = stub.GetBookingByUserID(booking_pb2.UserID(user_id=user_id))    
-        reservations = []
-        for reservation in all_reservations_for_user:
-            for dates in reservation.dates:
-                if dates.date == reservation_date:
-                    reservations.append(dates)
-                else:
-                    continue     
-        channel.close()
-        for item in reservations:
-            res  = make_response(MessageToDict(item), 200)
-            return res
-        return make_response(jsonify({"Error": "There is an error in user booking request"}), 402)
-        
+    if request.args:
+        req = request.args
+        reservation_date = req["date"]
+        with grpc.insecure_channel('localhost:3001') as channel :
+            stub = booking_pb2_grpc.BookingStub(channel)
+            all_reservations_for_user = stub.GetBookingByUserID(booking_pb2.UserID(user_id=user_id))
+            reservations = []
+            for reservation in all_reservations_for_user:
+                for dates in reservation.dates:
+                    if dates.date == reservation_date:
+                        reservations.append(dates)
+            channel.close()
+            for item in reservations:
+                res = make_response(MessageToDict(item), 200)
+                return res
+            return make_response(jsonify({"Error": "There is an error in user booking request"}), 402)
+    else:
+        return make_response(jsonify({"error": "reservation date not found"}), 400)
 
 # Get reservations(bookings) details by user_id
 # We use graphQL to access the movie Service and get informations about movies.
