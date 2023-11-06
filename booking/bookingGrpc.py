@@ -57,7 +57,7 @@ class BookingServicer(booking_pb2_grpc.BookingServicer):
                                     is_error = False
                                 channel.close()
         if is_error:
-            return booking_pb2.BookingData(user_id="", dates="")
+            return booking_pb2.BookingData(user_id="user_not_found", dates="")
         else:
             new_bookings = {"bookings": self.db}
             with open("{}/data/bookings.json".format("."), "w") as wfile:
